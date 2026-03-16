@@ -334,14 +334,14 @@ class AlterationCrafting {
         consecutiveErrors := 0
         maxErrors         := 3
         Loop (conf.MaxAttempts > 0 ? conf.MaxAttempts : 100000) {
-            if !CraftingCore.HasCurrency(StashMap.Alteration) {
+            if !CraftingCore.HasCurrency(CraftingCore.ActiveMap.Alteration) {
                 CraftingCore.Log("STOP: Out of Alterations")
                 MsgBox("Закончились альты!")
                 ExitApp()
             }
 
-            CraftingCore.UseCurrency(StashMap.Alteration, StashMap.CraftItem)
-            item := CraftingCore.GetItem(StashMap.CraftItem)
+            CraftingCore.UseCurrency(CraftingCore.ActiveMap.Alteration, CraftingCore.ActiveMap.CraftItem)
+            item := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
             if (item.Length == 0) {
                 consecutiveErrors++
                 if (consecutiveErrors >= maxErrors) {
@@ -361,8 +361,8 @@ class AlterationCrafting {
             this._CheckSuccess(item, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
 
             if (this._ShouldAugment(item, conf)) {
-                CraftingCore.UseCurrency(StashMap.Augmentation, StashMap.CraftItem)
-                updatedItem := CraftingCore.GetItem(StashMap.CraftItem)
+                CraftingCore.UseCurrency(CraftingCore.ActiveMap.Augmentation, CraftingCore.ActiveMap.CraftItem)
+                updatedItem := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
                 this._CheckSuccess(updatedItem, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
             }
 
@@ -378,8 +378,8 @@ class AlterationCrafting {
     static _CheckInitialState(conf) {
         ToolTip("Проверка текущего состояния предмета...")
 
-        parsedItem := CraftingCore.GetItem(StashMap.CraftItem)
-        rarity     := CraftingCore.GetRarity(CraftingCore.GetItemDetailedText(StashMap.CraftItem))
+        parsedItem := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
+        rarity     := CraftingCore.GetRarity(CraftingCore.GetItemDetailedText(CraftingCore.ActiveMap.CraftItem))
 
         if (rarity != this.RARITY_BLUE) {
             summary := CraftingCore.GetItemSummary(parsedItem)
@@ -396,14 +396,14 @@ class AlterationCrafting {
 
     static _InitialAugmentation(item, conf) {
         if this._ShouldAugment(item, conf) {
-            CraftingCore.UseCurrency(StashMap.Augmentation, StashMap.CraftItem)
-            updatedItem := CraftingCore.GetItem(StashMap.CraftItem)
+            CraftingCore.UseCurrency(CraftingCore.ActiveMap.Augmentation, CraftingCore.ActiveMap.CraftItem)
+            updatedItem := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
             this._CheckSuccess(updatedItem, conf, "Успех достигнут!`n`n", "SUCCESS on Initial Augmentation")
         }
     }
     
     static _ShouldAugment(item, conf) {
-        canAugment := item.Length < 2 && CraftingCore.HasCurrency(StashMap.Augmentation)
+        canAugment := item.Length < 2 && CraftingCore.HasCurrency(CraftingCore.ActiveMap.Augmentation)
         if (!canAugment) {
             return false
         }
