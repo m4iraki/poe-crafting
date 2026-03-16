@@ -43,7 +43,7 @@ MyFilters := [
 conf := {
     Version:     1.0,
     MaxAttempts: 500,
-    CraftMode:   AlterationCrafting.STRATEGY_ANY, ; "ANY", "BOTH", "CLEAN"
+    Strategy:    AlterationCrafting.STRATEGY_ANY, ; "ANY", "BOTH", "CLEAN"
     Filters:     MyFilters,
     DebugLevel:  0 ; 0 - только итог, 1 - всё подряд
 }

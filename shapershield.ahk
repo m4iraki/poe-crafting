@@ -1,6 +1,5 @@
 #Requires AutoHotkey v2.0
 #Include lib.ahk
-#Include stashmap2k.ahk
 
 MyFilters := [
     { name: "Oracle's" },
@@ -12,7 +11,7 @@ MyFilters := [
 ]
 conf := {
     Version:     1.0,
-    CraftMode:   AlterationCrafting.STRATEGY_ANY, ; "ANY", "BOTH", "CLEAN"
+    Strategy:    AlterationCrafting.STRATEGY_ANY, ; "ANY", "BOTH", "CLEAN"
     Filters:     MyFilters,
 }
 
