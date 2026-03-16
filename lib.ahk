@@ -288,7 +288,7 @@ class AlterationCrafting {
      * Проверяем версию и осмысленность конфига
      */
     static Run(userConf) {
-        filteredFilters = userConf.HasProp("Filters") ? this._FilterFilters(userConf.Filters) : []
+        filteredFilters := userConf.HasProp("Filters") ? this._FilterFilters(userConf.Filters) : []
         conf := {
             Version:     userConf.HasProp("Version")     ? userConf.Version     : this.Version,
             MaxAttempts: userConf.HasProp("MaxAttempts") ? userConf.MaxAttempts : 0, ; 0 = Unlimited
@@ -379,7 +379,7 @@ class AlterationCrafting {
         ToolTip("Проверка текущего состояния предмета...")
 
         parsedItem := CraftingCore.GetItem(StashMap.CraftItem)
-        rarity     := CraftingCore.GetRarity(StashMap.CraftItem)
+        rarity     := CraftingCore.GetRarity(CraftingCore.GetItemDetailedText(StashMap.CraftItem))
 
         if (rarity != this.RARITY_BLUE) {
             summary := CraftingCore.GetItemSummary(parsedItem)
@@ -420,10 +420,10 @@ class AlterationCrafting {
     }
 
     static _CheckSuccess(item, conf, message, logMessage) {
-        if CraftingCore.Evaluate(item, conf.Filters, conf.Strategy) {
+        if this.Evaluate(item, conf.Filters, conf.Strategy) {
             summary := CraftingCore.GetItemSummary(item)
             CraftingCore.Log(logMessage . StrReplace(summary, "`n", " | "))
-            MsgBox(message . summary, "Успех", "Icon i")
+            MsgBox(message . summary, "Успех", "Iconi")
             ExitApp()
         }
     }
