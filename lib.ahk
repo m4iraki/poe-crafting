@@ -95,15 +95,24 @@ class CraftingCore {
      * Проверка наличия валюты в ячейке по цвету (защита от пустых кликов)
      */
     static HasCurrency(currency) {
-        color := PixelGetColor(currency.x, currency.y)
+        offsets := [
+            {x: 0,  y: 0},
+            {x: -5, y: -5},
+            {x: 5,  y: 5},
+            {x: -5, y: 5},
+            {x: 5,  y: -5}
+        ]
 
-        ; Извлекаем RGB
-        r := (color >> 16) & 0xFF
-        g := (color >> 8) & 0xFF
-        b := color & 0xFF
+        for off in offsets {
+            color := PixelGetColor(currency.x + off.x, currency.y + off.y)
+            r := (color >> 16) & 0xFF
+            g := (color >> 8) & 0xFF
+            b := color & 0xFF
 
-        ; Если сумма каналов меньше EmptySlotIntensity — ячейка считается пустой (темной)
-        return (r + g + b > this.EmptySlotIntensity)
+            if (r + g + b > this.EmptySlotIntensity)
+                return true
+        }
+        return false
     }
 
     static GetItem(item) {
@@ -353,8 +362,8 @@ class AlterationCrafting {
         	}
         	consecutiveErrors := 0
 
-        	summary := CraftingCore.GetItemSummary(item)
             if (conf.DebugLevel > 0) {
+                summary := CraftingCore.GetItemSummary(item)
                 CraftingCore.Log("Step " A_Index " (ALT): " StrReplace(summary, "`n", " | "))
             }
 
@@ -363,16 +372,18 @@ class AlterationCrafting {
             if (this._ShouldAugment(item, conf)) {
                 CraftingCore.UseCurrency(CraftingCore.ActiveMap.Augmentation, CraftingCore.ActiveMap.CraftItem)
                 updatedItem := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
+                if (conf.DebugLevel > 0) {
+                    summary := CraftingCore.GetItemSummary(updatedItem)
+                    CraftingCore.Log("Step " A_Index " (AUG): " StrReplace(summary, "`n", " | "))
+                }
                 this._CheckSuccess(updatedItem, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
             }
 
         }
 
-        if (A_Index == conf.MaxAttempts) {
-            CraftingCore.Log("FAILED: Reached MaxAttempts (" conf.MaxAttempts ")")
-            MsgBox("Лимит попыток исчерпан.")
-            ExitApp()
-        }
+        CraftingCore.Log("FAILED: Reached MaxAttempts (" conf.MaxAttempts ")")
+        MsgBox("Лимит попыток исчерпан.")
+        ExitApp()
     }
 
     static _CheckInitialState(conf) {
