@@ -1,0 +1,1 @@
+del target\crafting.zip && 7z a -tzip target/crafting.zip @release_file_list.txt
