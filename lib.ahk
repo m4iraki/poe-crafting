@@ -16,7 +16,6 @@ class CraftingCore {
     static FPSDelay   := 30 ; Задержка на отрисовку (зависит от производительности ПК)
     static LogFile    := "craft_log.txt"
     static DebugLevel := 0  ; 0 - только итог, 1 - всё подряд
-    static EmptySlotIntensity := 40 ; Сумма цвета в ячейке, ниже которой считаем ячейку пустой
 
     static LoadSettings() {
         ; Если файла нет, создаем его с текущими дефолтами
@@ -25,7 +24,6 @@ class CraftingCore {
             IniWrite(this.FPSDelay,           this.IniFile, "Delays",  "FPSDelay"          )
             IniWrite(this.LogFile,            this.IniFile, "General", "LogFile"           )
             IniWrite(this.DebugLevel,         this.IniFile, "General", "DebugLevel"        )
-            IniWrite(this.EmptySlotIntensity, this.IniFile, "General", "EmptySlotIntensity")
         }
 
         ; Читаем значения из INI
@@ -33,7 +31,6 @@ class CraftingCore {
         this.FPSDelay           := Number(IniRead(this.IniFile, "Delays",  "FPSDelay",           this.FPSDelay          ))
         this.LogFile            :=        IniRead(this.IniFile, "General", "LogFile",            this.LogFile           )
         this.DebugLevel         := Number(IniRead(this.IniFile, "General", "DebugLevel",         this.DebugLevel        ))
-        this.EmptySlotIntensity := Number(IniRead(this.IniFile, "General", "EmptySlotIntensity", this.EmptySlotIntensity))
     }
 
     /*
@@ -46,10 +43,11 @@ class CraftingCore {
             k := H / this.BaseHeight
 
             for name, pos in StashMap.OwnProps() {
-                if (pos.HasProp("x") && pos.HasProp("y")) {
+                if (pos.HasProp("x") && pos.HasProp("y") && pos.HasProp("name")) {
                     this.ActiveMap.%name% := {
                         x: Round(pos.x * k),
-                        y: Round(pos.y * k)
+                        y: Round(pos.y * k),
+                        name: pos.name
                     }
                 }
             }
@@ -63,7 +61,7 @@ class CraftingCore {
     /*
      * Проверка окна игры и активация, загрузка настроек
      */
-    static Prepare() {
+    static Prepare(debugLevel := 0) {
         if !WinExist(this.TargetWindow) {
             MsgBox("Игра не запущена! (Окно Path of Exile не найдено)", "Ошибка", "Icon!")
             ExitApp()
@@ -71,6 +69,7 @@ class CraftingCore {
         WinActivate(this.TargetWindow)
         WinWaitActive(this.TargetWindow, , 2) ; Ждем 2 секунды чтобы ОС отрисовала окно, если оно было неактивно
         this.LoadSettings()
+        this.DebugLevel := debugLevel
         this.InitializeMap()
     }
 
@@ -80,39 +79,38 @@ class CraftingCore {
         }
     }
 
-    static UseCurrency(currency, item) {
-        MouseMove(currency.x, currency.y, 0)
+    static MClick(target, button) {
+        MouseMove(target.x, target.y, 0)
         Sleep(this.FPSDelay)
-        Click("Right")
+        Click(button)
         Sleep(this.PingDelay)
-        MouseMove(item.x, item.y, 0)
-        Sleep(this.FPSDelay)
-        Click("Left")
-        Sleep(2 * this.PingDelay + this.FPSDelay)
     }
 
-    /*
-     * Проверка наличия валюты в ячейке по цвету (защита от пустых кликов)
-     */
-    static HasCurrency(currency) {
-        offsets := [
-            {x: 0,  y: 0},
-            {x: -5, y: -5},
-            {x: 5,  y: 5},
-            {x: -5, y: 5},
-            {x: 5,  y: -5}
-        ]
+    static UseCurrency(currency, item) {
+        this.MClick(currency, "Right")
+        this.MClick(item, "Left")
+        Sleep(this.PingDelay + this.FPSDelay)
+    }
 
-        for off in offsets {
-            color := PixelGetColor(currency.x + off.x, currency.y + off.y)
-            r := (color >> 16) & 0xFF
-            g := (color >> 8) & 0xFF
-            b := color & 0xFF
-
-            if (r + g + b > this.EmptySlotIntensity)
-                return true
+    static CurrencyCount(currency) {
+        rawText := this.GetItemDetailedText(currency)
+        if (rawText = "") {
+            return 0
         }
-        return false
+        rarity := this.GetRarity(rawText)
+        if (rarity != "Currency") {
+            return 0
+        }
+        if (!RegExMatch(rawText, "m)^([^:^-][^:\r\n]+)$(*ACCEPT)", &name)) {
+            return 0
+        }
+        if (name[1] != currency.name) {
+            return 0
+        }
+        if (!RegExMatch(rawText, "m)^Stack Size: ([\d\,]+)(*ACCEPT)", &count)) {
+            return 0
+        }
+        return Number(StrReplace(count[1], ","))
     }
 
     static GetItem(item) {
@@ -153,8 +151,7 @@ class CraftingCore {
      */
     static GetFullParsedItem(itemText) {
         parsedMods := []
-        text := StrReplace(itemText, "`r`n", "`n") ; нормализируем переносы, если встречаются `r`n и `n
-        lines := StrSplit(text, "`n")
+        lines := this.SplitNormalize(itemText)
 
         currentMod := ""
 
@@ -203,7 +200,7 @@ class CraftingCore {
     }
 
     static GetRarity(itemText) {
-        if RegExMatch(itemText, "Rarity: (\w+)", &match)
+        if RegExMatch(itemText, "m)^Rarity: (\w+)$(*ACCEPT)", &match)
             return match[1]
         return ""
     }
@@ -216,24 +213,18 @@ class CraftingCore {
         return summary
     }
 
-    /*
-     * Хелпер для отладки: выводит содержимое распарсенных модов
-     */
-    static Dump(arr) {
-        if !IsObject(arr) || (arr.HasProp("Length") && arr.Length = 0)
-            return "Предмет не содержит известных модов или ошибка парсинга."
+    static ReplaceNewLines(string) {
+        return StrReplace(string, "`n", " | ")
+    }
 
-        str := ""
-        for i, obj in arr {
-            str .= "MOD #" i ": " obj.name " (T" obj.tier ")`n"
-            str .= "   DESC: " obj.desc "`n`n"
-        }
-        return str
+    static SplitNormalize(string) {
+        text := StrReplace(string, "`r`n", "`n") ; нормализируем переносы, если встречаются `r`n и `n
+        return StrSplit(text, "`n")
     }
 
     /*
      * Подсчет кол-ва модов, подходящих по фильтрам
-     * Fail-fast для сложных модов (например of Shaping)
+     * Fail-fast кроме сложных модов (например of Shaping)
      */
     static CountMatches(itemMods, filters) {
         matchCount := 0
@@ -336,20 +327,33 @@ class AlterationCrafting {
     }
 
     static _ExecuteLoop(conf) {
-        CraftingCore.Prepare()
-        CraftingCore.DebugLevel := conf.DebugLevel
+        CraftingCore.Prepare(conf.DebugLevel)
         CraftingCore.Log("--- STARTING NEW SESSION (Strategy: " . conf.Strategy . ") ---")
+
         this._CheckInitialState(conf)
+
         consecutiveErrors := 0
         maxErrors         := 3
+
+        checkedAltCount   := CraftingCore.CurrencyCount(CraftingCore.ActiveMap.Alteration)
+        checkedAugCount   := CraftingCore.CurrencyCount(CraftingCore.ActiveMap.Augmentation)
+
+        alterationCount   := checkedAltCount
+        augmentationCount := checkedAugCount
+
         Loop (conf.MaxAttempts > 0 ? conf.MaxAttempts : 100000) {
-            if !CraftingCore.HasCurrency(CraftingCore.ActiveMap.Alteration) {
+            if (alterationCount * 2 < checkedAltCount) {
+                checkedAltCount   := CraftingCore.CurrencyCount(CraftingCore.ActiveMap.Alteration)
+                alterationCount   := checkedAltCount
+            }
+            if (alterationCount < 1) {
                 CraftingCore.Log("STOP: Out of Alterations")
                 MsgBox("Закончились альты!")
                 ExitApp()
             }
 
             CraftingCore.UseCurrency(CraftingCore.ActiveMap.Alteration, CraftingCore.ActiveMap.CraftItem)
+            alterationCount--
             item := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
             if (item.Length == 0) {
                 consecutiveErrors++
@@ -364,17 +368,22 @@ class AlterationCrafting {
 
             if (conf.DebugLevel > 0) {
                 summary := CraftingCore.GetItemSummary(item)
-                CraftingCore.Log("Step " A_Index " (ALT): " StrReplace(summary, "`n", " | "))
+                CraftingCore.Log("Step " A_Index " (ALT): " CraftingCore.ReplaceNewLines(summary))
             }
 
             this._CheckSuccess(item, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
 
-            if (this._ShouldAugment(item, conf)) {
+            if (augmentationCount * 2 < checkedAltCount) {
+                checkedAugCount   := CraftingCore.CurrencyCount(CraftingCore.ActiveMap.Augmentation)
+                augmentationCount := checkedAugCount
+            }
+            if (augmentationCount > 0 && this._ShouldAugment(item, conf)) {
                 CraftingCore.UseCurrency(CraftingCore.ActiveMap.Augmentation, CraftingCore.ActiveMap.CraftItem)
+                augmentationCount--
                 updatedItem := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
                 if (conf.DebugLevel > 0) {
                     summary := CraftingCore.GetItemSummary(updatedItem)
-                    CraftingCore.Log("Step " A_Index " (AUG): " StrReplace(summary, "`n", " | "))
+                    CraftingCore.Log("Step " A_Index " (AUG): " CraftingCore.ReplaceNewLines(summary))
                 }
                 this._CheckSuccess(updatedItem, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
             }
@@ -394,35 +403,29 @@ class AlterationCrafting {
 
         if (rarity != this.RARITY_BLUE) {
             summary := CraftingCore.GetItemSummary(parsedItem)
-            CraftingCore.Log("PRE-CHECK FAILURE: Item is not magic. " . StrReplace(summary, "`n", " | "))
+            CraftingCore.Log("PRE-CHECK FAILURE: Item is not magic. " . CraftingCore.ReplaceNewLines(summary))
             MsgBox("Предмет не является магическим!`n`n" . summary, "Ошибка", "Icon! 4096")
             ExitApp()
         }
 
         this._CheckSuccess(parsedItem, conf, "Предмет УЖЕ подходит под фильтры!`n`n", "PRE-CHECK SUCCESS: Item already matches filters. ")
-        this._InitialAugmentation(parsedItem, conf)
 
-        ToolTip()
-    }
-
-    static _InitialAugmentation(item, conf) {
-        if this._ShouldAugment(item, conf) {
+        augCount := CraftingCore.CurrencyCount(CraftingCore.ActiveMap.Augmentation)
+        if (augCount > 0 && this._ShouldAugment(parsedItem, conf)) {
             CraftingCore.UseCurrency(CraftingCore.ActiveMap.Augmentation, CraftingCore.ActiveMap.CraftItem)
             updatedItem := CraftingCore.GetItem(CraftingCore.ActiveMap.CraftItem)
             this._CheckSuccess(updatedItem, conf, "Успех достигнут!`n`n", "SUCCESS on Initial Augmentation")
         }
+
+        ToolTip()
     }
     
     static _ShouldAugment(item, conf) {
-        canAugment := item.Length < 2 && CraftingCore.HasCurrency(CraftingCore.ActiveMap.Augmentation)
-        if (!canAugment) {
-            return false
-        }
         if (conf.Strategy = this.STRATEGY_CLEAN) {
             return item.Length == 0 ; если начали с предмета, заануленного в 0
         }
         if (conf.Strategy = this.STRATEGY_ANY) {
-            return true
+            return item.Length < 2
         }
         if (conf.Strategy = this.STRATEGY_BOTH) {
             return CraftingCore.CountMatches(item, conf.Filters) == item.Length
@@ -433,7 +436,7 @@ class AlterationCrafting {
     static _CheckSuccess(item, conf, message, logMessage) {
         if this.Evaluate(item, conf.Filters, conf.Strategy) {
             summary := CraftingCore.GetItemSummary(item)
-            CraftingCore.Log(logMessage . StrReplace(summary, "`n", " | "))
+            CraftingCore.Log(logMessage . CraftingCore.ReplaceNewLines(summary))
             MsgBox(message . summary, "Успех", "Iconi")
             ExitApp()
         }
@@ -441,29 +444,29 @@ class AlterationCrafting {
 }
 
 class StashMap {
-	static Transmutation := {x:  75, y: 370}
-	static Alteration    := {x: 150, y: 370}
-	static Annulment     := {x: 225, y: 370}
-	static Chance        := {x: 300, y: 370}
-	static Augmentation  := {x: 300, y: 445}
+	static Transmutation := { x:  75, y: 370, name: "Orb of Transmutation" }
+	static Alteration    := { x: 150, y: 370, name: "Orb of Alteration" }
+	static Annulment     := { x: 225, y: 370, name: "Orb of Annulment" }
+	static Chance        := { x: 300, y: 370, name: "Orb of Chance" }
+	static Augmentation  := { x: 300, y: 445, name: "Orb of Augmentation" }
 
-	static Exalted       := {x: 400, y: 370}
+	static Exalted       := { x: 400, y: 370, name: "Exalted Orb" }
 
-	static Regal         := {x: 580, y: 370}
-	static Alchemy       := {x: 655, y: 370}
-	static Chaos         := {x: 730, y: 370}
-	static Blessing      := {x: 805, y: 370}
+	static Regal         := { x: 580, y: 370, name: "Regal Orb" }
+	static Alchemy       := { x: 655, y: 370, name: "Orb of Alchemy" }
+	static Chaos         := { x: 730, y: 370, name: "Chaos Orb" }
+	static Blessed       := { x: 805, y: 370, name: "Blessed Orb" }
 
-	static Jewellers     := {x: 150, y: 535}
-	static Fusing        := {x: 225, y: 535}
-	static Chromatic     := {x: 300, y: 535}
+	static Jewellers     := { x: 150, y: 535, name: "Jeweller's Orb" }
+	static Fusing        := { x: 225, y: 535, name: "Orb of Fusing" }
+	static Chromatic     := { x: 300, y: 535, name: "Chromatic Orb" }
 
-	static Scouring      := {x: 580, y: 535}
+	static Scouring      := { x: 580, y: 535, name: "Orb of Scouring" }
 
-	static Whetstone     := {x: 580, y: 275}
-	static Scrap         := {x: 655, y: 275}
+	static Whetstone     := { x: 580, y: 275, name: "Blacksmith's Whetstone" }
+	static Scrap         := { x: 655, y: 275, name: "Armourer's Scrap" }
 
-	static CraftItem     := {x: 445, y: 615}
+	static CraftItem     := { x: 445, y: 615, name: "" }
 }
 
 ; Горячая клавиша для экстренной остановки
