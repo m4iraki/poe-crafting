@@ -1,5 +1,5 @@
 #Requires AutoHotkey v2.0
-#Include lib.ahk
+#Include ../lib/_Includes.ahk
 
 MyFilters := [
     { name: "Oracle's" },

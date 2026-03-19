@@ -1,5 +1,4 @@
-lib.ahk
+lib/
+examples/
 README.md
 settings.ini.example
-flasks_example.ahk
-shaper_shield_example.ahk

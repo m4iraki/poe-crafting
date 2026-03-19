@@ -1,5 +1,5 @@
 #Requires AutoHotkey v2.0
-#Include lib.ahk
+#Include ../lib/_Includes.ahk
 
 MyFilters := [
     { text: "when you are Hit by an Enemy", tier: 2 },
