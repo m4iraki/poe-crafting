@@ -32,7 +32,10 @@ class Stash {
 			this.Initialize()
 		}
 		if (this.Currencies.Has(currencyType)) {
-			return this.Currencies[currencyType]
+            currency := this.Currencies[currencyType]
+            currency.Refresh()
+            currency.UpdateUI() 
+			return currency
 		}
 
 		MsgBox("Не найдена запись '" (currencyType.name) "' в Stash")
@@ -95,14 +98,23 @@ class CurrencyItem {
             this.Count--
             this._callsSinceSync++
             Sleep(Config.PingDelay + Config.FPSDelay)
+            update := Core.GetItem(targetPos)
             if (this._callsSinceSync >= CurrencyItem.SyncThreshold) {
                 this.Refresh()
+                this.UpdateUI()
             } else {
                 this.UpdateUI()
             }
-            return true
+            if (Config.DebugLevel > 0) {
+                Util.Log("Step " A_Index " (" this.currencyType.name "): " Util.ReplaceNewLines(update.ToString()))
+            }
+            HistoryDashboard.AddItem(update)
+            return update
+        } else { ; вызывающий должен проверять сам. отсуствие валюты должно обрабатываться
+            Util.Log("ERROR: Tried to use " this.currencyType.name " but Count is 0")
+            MsgBox("Ошибка!`nПытался использовать " this.currencyType.name " но они отсутствуют!", "Ошибка", "Icon! 4096")
+            ExitApp()
         }
-        return false
     }
 
     UpdateUI() {

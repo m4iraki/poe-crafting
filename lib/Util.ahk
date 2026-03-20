@@ -39,4 +39,19 @@ class Util {
         }
         return str
     }
+
+    static ExitWithMessage(message, logMessage, success) {
+        this.Log(logMessage)
+        MsgBox(
+            message,
+            success ? this.SUCCESS : this.ERROR,
+            success ? this.ICON_OK : this.ICON_ERROR
+        )
+        ExitApp()
+    }
+
+    static SUCCESS := "Успех"
+    static ICON_OK := "Iconi"
+    static ERROR := "Ошибка"
+    static ICON_ERROR := "Icon! 4096"
 }

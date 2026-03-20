@@ -1,46 +1,69 @@
 #Requires AutoHotkey v2.0
 
 class AlterationCrafting {
-    static STRATEGY_ANY   := "ANY"
-    static STRATEGY_BOTH  := "BOTH"
+    static STRATEGY_ANY := "ANY"
+    static STRATEGY_BOTH := "BOTH"
     static STRATEGY_CLEAN := "CLEAN"
 
-    static RARITY_BLUE    := "Magic"
+    static RARITY_BLUE := "Magic"
 
-    static Evaluate(item, filters, strategy := "ANY") {
-        matches   := Core.CountMatches(item, filters)
+    static EVAL_SUCCESS := "Success"
+    static EVAL_FAILURE := "Failure"
+    static EVAL_AUGMENT := "Augment"
+    static Evaluate(item, filters, strategy := this.STRATEGY_ANY) {
+        matches := Core.CountMatches(item, filters)
         totalMods := item.mods.Length
 
-        if (strategy == this.STRATEGY_ANY) {
-            return (matches > 0)
+        switch strategy {
+            case this.STRATEGY_ANY:
+                if (matches > 0) {
+                    return this.EVAL_SUCCESS
+                } else {
+                    return (item.mods.Length < 2) ? this.EVAL_AUGMENT : this.EVAL_FAILURE
+                }
+            case this.STRATEGY_BOTH:
+                if (totalMods == 2) {
+                    return (matches == 2) ? this.EVAL_SUCCESS : this.EVAL_FAILURE
+                } else {
+                    return (matches == totalMods) ? this.EVAL_AUGMENT : this.EVAL_FAILURE
+                }
+            case this.STRATEGY_CLEAN:
+                return (matches > 0 && matches == totalMods) ? this.EVAL_SUCCESS : this.EVAL_FAILURE
         }
-
-        if (strategy == this.STRATEGY_BOTH) {
-            return (totalMods == 2 && matches == 2)
-        }
-
-        if (strategy == this.STRATEGY_CLEAN) {
-            return (matches > 0 && matches == totalMods)
-        }
-
-        return false
     }
 
     static Run(userConf) {
         filteredFilters := userConf.HasProp("Filters") ? this._FilterFilters(userConf.Filters) : []
-        conf := {
-            MaxAttempts: userConf.HasProp("MaxAttempts") ? userConf.MaxAttempts : 0, ; 0 = Unlimited
-            Strategy:    userConf.HasProp("Strategy")    ? userConf.Strategy    : this.STRATEGY_ANY,
-            Filters:     filteredFilters
-        }
+        maxAttempts := userConf.HasProp("MaxAttempts") ? userConf.MaxAttempts : 0
+        strategy := userConf.HasProp("Strategy") ? userConf.Strategy : this.STRATEGY_ANY
 
-        if (conf.Filters.Length == 0) {
+        if (filteredFilters.Length == 0) {
             MsgBox("Ошибка: Список фильтров пуст!")
             ExitApp()
         }
 
-        Util.Log("--- STARTING NEW SESSION (Strategy: " . conf.Strategy . ") ---")
-        this._ExecuteLoop(conf)
+        Util.Log("--- STARTING NEW SESSION (Strategy: " . strategy . ") ---")
+        result := this.ExecuteLoop(filteredFilters, strategy, maxAttempts)
+        switch result.exec {
+            case this.EXECUTE_SUCCESS:
+                Util.ExitWithMessage(
+                    "Успех достигнут на шаге " result.steps "!`n`n" result.item.ToString(),
+                    "SUCCESS on step " A_Index ": " Util.ReplaceNewLines(result.item.ToString()),
+                    true
+                )
+            case this.EXECUTE_OUT_OF_CURRENCY:
+                Util.ExitWithMessage(
+                    "Закончились альты!",
+                    "FAILED: Out of " Currencies.Alteration.name,
+                    false
+                )
+            case this.EXECUTE_OUT_OF_ATTEMPTS:
+                Util.ExitWithMessage(
+                    "Лимит попыток исчерпан.",
+                    "FAILED: Reached MaxAttempts",
+                    false
+                )
+        }
     }
 
     static _FilterFilters(filters) {
@@ -58,105 +81,87 @@ class AlterationCrafting {
         return validFilters
     }
 
-    static _ExecuteLoop(conf) {
+    static EXECUTE_SUCCESS := "Success"
+    static EXECUTE_OUT_OF_CURRENCY := "Out of currency"
+    static EXECUTE_OUT_OF_ATTEMPTS := "Out of attempts"
+    static ExecuteLoop(filters, strategy, maxAttempts := 0) {
         consecutiveErrors := 0
-        maxErrors         := 3
+        maxErrors := 3
 
         alts := Stash.Get(Currencies.Alteration)
         augs := Stash.Get(Currencies.Augmentation)
 
-        alts.Refresh()
-        augs.Refresh()
-        alts.UpdateUI()
-        augs.UpdateUI()
+        eval := this._CheckInitialState(filters, strategy, augs)
+        item := Core.GetItem(Stash.CraftItem)
+        switch eval {
+            case this.EVAL_SUCCESS:
+                return { exec: this.EXECUTE_SUCCESS, steps: 0, item: item}
+            default:
+        }
 
-        this._CheckInitialState(conf, augs)
-
-        Loop (conf.MaxAttempts > 0 ? conf.MaxAttempts : 100000) {
+        loop ((maxAttempts > 0) ? maxAttempts : 100000) {
             if (alts.Count < 1) {
-                Util.Log("STOP: Out of Alterations")
-                MsgBox("Закончились альты!")
-                ExitApp()
+                return { exec: this.EXECUTE_OUT_OF_CURRENCY, steps: A_Index, item: item}
             }
 
-            alts.Use(Stash.CraftItem)
-            item := Core.GetItem(Stash.CraftItem)
-            HistoryDashboard.AddItem(item)
+            item := alts.Use(Stash.CraftItem)
+
             if (item.empty) {
                 consecutiveErrors++
                 if (consecutiveErrors >= maxErrors) {
-                    Util.Log("FATAL: " maxErrors " empty reads in a row. Is the item missing?")
-                    MsgBox("Ошибка: Предмет не читается или пуст слишком долго. Проверьте сташ!", "Критическая ошибка", "Icon!")
-                    ExitApp()
+                    Util.ExitWithMessage(
+                        "Ошибка: Предмет не читается или отсутствует. Проверьте стeш!",
+                        "FATAL: " maxErrors " empty reads in a row. Is the item missing?",
+                        false
+                    )
                 }
-        		continue
-        	}
-        	consecutiveErrors := 0
-
-            if (Config.DebugLevel > 0) {
-                Util.Log("Step " A_Index " (ALT): " Util.ReplaceNewLines(item.ToString()))
+                continue
             }
-
-            this._CheckSuccess(item, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
-
-            if (augs.Count > 0 && this._ShouldAugment(item, conf)) {
-                augs.Use(Stash.CraftItem)
-                item := Core.GetItem(Stash.CraftItem)
-                HistoryDashboard.AddItem(item)
-                if (Config.DebugLevel > 0) {
-                    Util.Log("Step " A_Index " (AUG): " Util.ReplaceNewLines(item.ToString()))
-                }
-                this._CheckSuccess(item, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
+            consecutiveErrors := 0
+            eval := this.Evaluate(item, filters, strategy)
+            switch eval {
+                case this.EVAL_AUGMENT:
+                    item := augs.Use(Stash.CraftItem)
+                    eval := this.Evaluate(item, filters, strategy)
+                default:
             }
-
+            switch eval {
+                case this.EVAL_SUCCESS:
+                    return { exec: this.EXECUTE_SUCCESS, steps: A_Index, item: item}
+                default:
+            }
         }
 
-        Util.Log("FAILED: Reached MaxAttempts (" conf.MaxAttempts ")")
-        MsgBox("Лимит попыток исчерпан.")
-        ExitApp()
+        return { exec: this.EXECUTE_OUT_OF_ATTEMPTS, item: item }
     }
 
-    static _CheckInitialState(conf, augs) {
+    static _CheckInitialState(filters, strategy, augs) {
         ToolTip("Проверка текущего состояния предмета...")
 
-        item   := Core.GetItem(Stash.CraftItem)
+        item := Core.GetItem(Stash.CraftItem)
 
         if (item.rarity != this.RARITY_BLUE) {
-            Util.Log("PRE-CHECK FAILURE: Item is not magic. " . Util.ReplaceNewLines(item.ToString()))
-            MsgBox("Предмет не является магическим!`n`n" . item.ToString(), "Ошибка", "Icon! 4096")
-            ExitApp()
+            transmutes := Stash.Get(Currencies.Transmutation)
+            if (transmutes.Count > 0) {
+                item := transmutes.Use(Stash.CraftItem)
+            } else {
+                Util.ExitWithMessage(
+                    "Предмет не является магическим и закончились трансмутки!`n`n" . item.ToString(),
+                    "FAILURE: Item is not magic and out of Transmutations. " . Util.ReplaceNewLines(item.ToString()),
+                    false
+                )
+            }
         }
-
-        this._CheckSuccess(item, conf, "Предмет УЖЕ подходит под фильтры!`n`n", "PRE-CHECK SUCCESS: Item already matches filters. ")
-
-        if (augs.Count > 0 && this._ShouldAugment(item, conf)) {
-            augs.Use(Stash.CraftItem)
-            item := Core.GetItem(Stash.CraftItem)
-            HistoryDashboard.AddItem(item)
-            this._CheckSuccess(item, conf, "Успех достигнут!`n`n", "SUCCESS on Initial Augmentation")
-        }
-
+        
+        eval := this.Evaluate(item, filters, strategy)
         ToolTip()
-    }
-    
-    static _ShouldAugment(item, conf) {
-        if (conf.Strategy = this.STRATEGY_CLEAN) {
-            return item.mods.Length == 0 ; если начали с предмета, заануленного в 0
-        }
-        if (conf.Strategy = this.STRATEGY_ANY) {
-            return item.mods.Length < 2
-        }
-        if (conf.Strategy = this.STRATEGY_BOTH) {
-            return Core.CountMatches(item, conf.Filters) == item.mods.Length
-        }
-        return false
-    }
 
-    static _CheckSuccess(item, conf, message, logMessage) {
-        if this.Evaluate(item, conf.Filters, conf.Strategy) {
-            Util.Log(logMessage . Util.ReplaceNewLines(item.ToString()))
-            MsgBox(message . item.ToString(), "Успех", "Iconi")
-            ExitApp()
+        switch eval {
+            case this.EVAL_AUGMENT:
+                item := augs.Use(Stash.CraftItem)
+                return this.Evaluate(item, filters, strategy)
+            default:
+                return eval
         }
     }
 }
