@@ -40,8 +40,12 @@ class Util {
         return str
     }
 
-    static ExitWithMessage(message, logMessage, success) {
-        this.Log(logMessage)
+    static SUCCESS := "Успех"
+    static ICON_OK := "Iconi"
+    static ERROR := "Ошибка"
+    static ICON_ERROR := "Icon! 4096"
+
+    static ExitWithMessage(message, success) {
         MsgBox(
             message,
             success ? this.SUCCESS : this.ERROR,
@@ -50,8 +54,25 @@ class Util {
         ExitApp()
     }
 
-    static SUCCESS := "Успех"
-    static ICON_OK := "Iconi"
-    static ERROR := "Ошибка"
-    static ICON_ERROR := "Icon! 4096"
+    static ExitWithMessageAndLog(message, logMessage := "", success := true) {
+        logMessage := (logMessage == "") ? message : logMessage
+        this.Log(logMessage)
+        this.ExitWithMessage(message, success)
+    }
+
+    static SuccessWithMessage(message) {
+        this.ExitWithMessage(message, true)
+    }
+
+    static FailWithMessage(message) {
+        this.ExitWithMessage(message, false)
+    }
+
+    static SuccessWithMessageAndLog(message, logMessage := "") {
+        this.ExitWithMessageAndLog(message, logMessage, true)
+    }
+    
+    static FailWithMessageAndLog(message, logMessage := "") {
+        this.ExitWithMessageAndLog(message, logMessage, false)
+    }
 }

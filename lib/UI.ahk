@@ -4,8 +4,7 @@ class UI {
 
     static Initialize() {
         if !WinExist(Config.TargetWindow) {
-            MsgBox("Игра не запущена! (Окно Path of Exile не найдено)", "Ошибка", "Icon!")
-            ExitApp()
+            Util.FailWithMessage("Игра не запущена! (Окно Path of Exile не найдено)")
         }
         WinActivate(Config.TargetWindow)
         WinWaitActive(Config.TargetWindow, , 2)

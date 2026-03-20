@@ -38,30 +38,26 @@ class AlterationCrafting {
         strategy := userConf.HasProp("Strategy") ? userConf.Strategy : this.STRATEGY_ANY
 
         if (filteredFilters.Length == 0) {
-            MsgBox("Ошибка: Список фильтров пуст!")
-            ExitApp()
+            Util.FailWithMessage("Ошибка: Список фильтров пуст!")
         }
 
         Util.Log("--- STARTING NEW SESSION (Strategy: " . strategy . ") ---")
         result := this.ExecuteLoop(filteredFilters, strategy, maxAttempts)
         switch result.exec {
             case this.EXECUTE_SUCCESS:
-                Util.ExitWithMessage(
+                Util.SuccessWithMessageAndLog(
                     "Успех достигнут на шаге " result.steps "!`n`n" result.item.ToString(),
-                    "SUCCESS on step " A_Index ": " Util.ReplaceNewLines(result.item.ToString()),
-                    true
+                    "SUCCESS on step " A_Index ": " Util.ReplaceNewLines(result.item.ToString())
                 )
             case this.EXECUTE_OUT_OF_CURRENCY:
-                Util.ExitWithMessage(
+                Util.FailWithMessageAndLog(
                     "Закончились альты!",
-                    "FAILED: Out of " Currencies.Alteration.name,
-                    false
+                    "FAILED: Out of " Currencies.Alteration.name
                 )
             case this.EXECUTE_OUT_OF_ATTEMPTS:
-                Util.ExitWithMessage(
+                Util.FailWithMessageAndLog(
                     "Лимит попыток исчерпан.",
-                    "FAILED: Reached MaxAttempts",
-                    false
+                    "FAILED: Reached MaxAttempts"
                 )
         }
     }
@@ -109,10 +105,9 @@ class AlterationCrafting {
             if (item.empty) {
                 consecutiveErrors++
                 if (consecutiveErrors >= maxErrors) {
-                    Util.ExitWithMessage(
+                    Util.FailWithMessageAndLog(
                         "Ошибка: Предмет не читается или отсутствует. Проверьте стeш!",
-                        "FATAL: " maxErrors " empty reads in a row. Is the item missing?",
-                        false
+                        "FATAL: " maxErrors " empty reads in a row. Is the item missing?"
                     )
                 }
                 continue
@@ -145,10 +140,9 @@ class AlterationCrafting {
             if (transmutes.Count > 0) {
                 item := transmutes.Use(Stash.CraftItem)
             } else {
-                Util.ExitWithMessage(
+                Util.FailWithMessageAndLog(
                     "Предмет не является магическим и закончились трансмутки!",
-                    "FAILURE: Item is not magic and out of " transmutes.currencyType.name ". ",
-                    false
+                    "FAILURE: Item is not magic and out of " transmutes.currencyType.name ". "
                 )
             }
         }

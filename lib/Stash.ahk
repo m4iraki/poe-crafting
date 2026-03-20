@@ -38,7 +38,7 @@ class Stash {
 			return currency
 		}
 
-		MsgBox("Не найдена запись '" (currencyType.name) "' в Stash")
+		Util.FailWithMessage("Не найдена запись '" (currencyType.name) "' в Stash")
 	}
 	static GetStashItem() {
 		if (this.IsInitialized) {
@@ -111,9 +111,10 @@ class CurrencyItem {
             HistoryDashboard.AddItem(update)
             return update
         } else { ; вызывающий должен проверять сам. отсуствие валюты должно обрабатываться
-            Util.Log("ERROR: Tried to use " this.currencyType.name " but Count is 0")
-            MsgBox("Ошибка!`nПытался использовать " this.currencyType.name " но они отсутствуют!", "Ошибка", "Icon! 4096")
-            ExitApp()
+            Util.FailWithMessageAndLog(
+                "ERROR: Tried to use " this.currencyType.name " but Count is 0",
+                "Ошибка!`nПытался использовать " this.currencyType.name " но они отсутствуют!"
+            )
         }
     }
 

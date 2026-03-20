@@ -14,12 +14,10 @@ class Core {
         }
 
         if (rawText = "") {
-            MsgBox(
+            Util.FailWithMessage(
                 "Ошибка: Не удалось скопировать данные предмета.`n`n" .
-                "Совет: Увеличьте PingDelay (сейчас: " . Config.PingDelay . "мс) или проверьте FPS.",
-                "Ошибка копирования", "Icon! 4096"
+                "Совет: Увеличьте PingDelay (сейчас: " . Config.PingDelay . "мс) или проверьте FPS."
             )
-            return ItemData()
         }
 
         return this.GetFullParsedItem(rawText)
@@ -93,7 +91,11 @@ class Core {
     }
 
     static CountMatches(item, filters) {
-        matchCount := 0
+        return this.GetMatches(item, filters).Length
+    }
+
+    static GetMatches(item, filters) {
+        matches := []
         for mod in item.mods {
             for f in filters {
                 nameMatch := !f.HasProp("name") || (mod.name = f.name)
@@ -108,11 +110,10 @@ class Core {
                 if (!textMatch) {
                     continue
                 }
-                matchCount++
+                matches.Push(mod)
                 break
             }
         }
-        return matchCount
+        return matches
     }
-
 }
