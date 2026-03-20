@@ -2,6 +2,18 @@
 
 class UI {
 
+    static Initialize() {
+        if !WinExist(Config.TargetWindow) {
+            MsgBox("Игра не запущена! (Окно Path of Exile не найдено)", "Ошибка", "Icon!")
+            ExitApp()
+        }
+        WinActivate(Config.TargetWindow)
+        WinWaitActive(Config.TargetWindow, , 2)
+        
+        WinGetClientPos(,, &W, &H, Config.TargetWindow)
+        Config.ScaleFactor := H / Config.BaseHeight
+    }
+
     static CreateFrame(pos, count) {
         hwnd := WinExist("ahk_class POEWindowClass")
         if !hwnd {
@@ -46,15 +58,7 @@ class UI {
         return { x: NumGet(point, 0, "Int"), y: NumGet(point, 4, "Int") }
     }
 
-    static Initialize() {
-        if !WinExist(Config.TargetWindow) {
-            MsgBox("Игра не запущена! (Окно Path of Exile не найдено)", "Ошибка", "Icon!")
-            ExitApp()
-        }
-        WinActivate(Config.TargetWindow)
-        WinWaitActive(Config.TargetWindow, , 2)
+    static ItemHistory() {
         
-        WinGetClientPos(,, &W, &H, Config.TargetWindow)
-        Config.ScaleFactor := H / Config.BaseHeight
     }
 }

@@ -19,7 +19,7 @@ class Core {
                 "Совет: Увеличьте PingDelay (сейчас: " . Config.PingDelay . "мс) или проверьте FPS.",
                 "Ошибка копирования", "Icon! 4096"
             )
-            return []
+            return ItemData()
         }
 
         return this.GetFullParsedItem(rawText)
@@ -38,6 +38,11 @@ class Core {
     static GetFullParsedItem(itemText) {
         parsedMods := []
         lines := Util.SplitNormalize(itemText)
+        rarity := this.GetRarity(itemText)
+        name := ""
+        if RegExMatch(itemText, "m)^([^:^-][^:\r\n]+)$(*ACCEPT)", &names) {
+            name := names[1]
+        }
 
         currentMod := ""
 
@@ -78,7 +83,7 @@ class Core {
         for mod in parsedMods
             mod.desc := Trim(RegExReplace(mod.desc, "\s+", " "))
 
-        return parsedMods
+        return ItemData(name, rarity, parsedMods)
     }
 
     static GetRarity(itemText) {
@@ -87,17 +92,9 @@ class Core {
         return ""
     }
 
-    static GetItemSummary(itemMods) {
-        summary := "Текущие моды:`n"
-        for i, mod in itemMods {
-            summary .= "[" . mod.type . "] " . mod.name . " (T" . mod.tier . "): " . mod.desc . "`n"
-        }
-        return summary
-    }
-
-    static CountMatches(itemMods, filters) {
+    static CountMatches(item, filters) {
         matchCount := 0
-        for mod in itemMods {
+        for mod in item.mods {
             for f in filters {
                 nameMatch := !f.HasProp("name") || (mod.name = f.name)
                 if (!nameMatch) {

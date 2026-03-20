@@ -3,6 +3,7 @@
 ; Без зависимостей
 #Include Config.ahk
 #Include ItemPosition.ahk
+#Include ItemData.ahk
 ; Базовые зависимости
 #Include Util.ahk
 #Include UI.ahk

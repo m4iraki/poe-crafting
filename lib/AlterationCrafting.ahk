@@ -7,9 +7,9 @@ class AlterationCrafting {
 
     static RARITY_BLUE    := "Magic"
 
-    static Evaluate(itemMods, filters, strategy := "ANY") {
-        matches   := Core.CountMatches(itemMods, filters)
-        totalMods := itemMods.Length
+    static Evaluate(item, filters, strategy := "ANY") {
+        matches   := Core.CountMatches(item, filters)
+        totalMods := item.mods.Length
 
         if (strategy == this.STRATEGY_ANY) {
             return (matches > 0)
@@ -81,7 +81,7 @@ class AlterationCrafting {
 
             alts.Use(Stash.CraftItem)
             item := Core.GetItem(Stash.CraftItem)
-            if (item.Length == 0) {
+            if (item.empty) {
                 consecutiveErrors++
                 if (consecutiveErrors >= maxErrors) {
                     Util.Log("FATAL: " maxErrors " empty reads in a row. Is the item missing?")
@@ -93,20 +93,18 @@ class AlterationCrafting {
         	consecutiveErrors := 0
 
             if (Config.DebugLevel > 0) {
-                summary := Core.GetItemSummary(item)
-                Util.Log("Step " A_Index " (ALT): " Util.ReplaceNewLines(summary))
+                Util.Log("Step " A_Index " (ALT): " Util.ReplaceNewLines(item.ToString()))
             }
 
             this._CheckSuccess(item, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
 
             if (augs.Count > 0 && this._ShouldAugment(item, conf)) {
                 augs.Use(Stash.CraftItem)
-                updatedItem := Core.GetItem(Stash.CraftItem)
+                item := Core.GetItem(Stash.CraftItem)
                 if (Config.DebugLevel > 0) {
-                    summary := Core.GetItemSummary(updatedItem)
-                    Util.Log("Step " A_Index " (AUG): " Util.ReplaceNewLines(summary))
+                    Util.Log("Step " A_Index " (AUG): " Util.ReplaceNewLines(item.ToString()))
                 }
-                this._CheckSuccess(updatedItem, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
+                this._CheckSuccess(item, conf, "Успех достигнут на шаге " . A_Index . "!`n`n", "SUCCESS on step " . A_Index)
             }
 
         }
@@ -119,22 +117,20 @@ class AlterationCrafting {
     static _CheckInitialState(conf, augs) {
         ToolTip("Проверка текущего состояния предмета...")
 
-        parsedItem := Core.GetItem(Stash.CraftItem)
-        rarity     := Core.GetRarity(Core.GetItemDetailedText(Stash.CraftItem))
+        item   := Core.GetItem(Stash.CraftItem)
 
-        if (rarity != this.RARITY_BLUE) {
-            summary := Core.GetItemSummary(parsedItem)
-            Util.Log("PRE-CHECK FAILURE: Item is not magic. " . Util.ReplaceNewLines(summary))
-            MsgBox("Предмет не является магическим!`n`n" . summary, "Ошибка", "Icon! 4096")
+        if (item.rarity != this.RARITY_BLUE) {
+            Util.Log("PRE-CHECK FAILURE: Item is not magic. " . Util.ReplaceNewLines(item.ToString()))
+            MsgBox("Предмет не является магическим!`n`n" . item.ToString(), "Ошибка", "Icon! 4096")
             ExitApp()
         }
 
-        this._CheckSuccess(parsedItem, conf, "Предмет УЖЕ подходит под фильтры!`n`n", "PRE-CHECK SUCCESS: Item already matches filters. ")
+        this._CheckSuccess(item, conf, "Предмет УЖЕ подходит под фильтры!`n`n", "PRE-CHECK SUCCESS: Item already matches filters. ")
 
-        if (augs.Count > 0 && this._ShouldAugment(parsedItem, conf)) {
-            augs.UseCuUserrency(Stash.CraftItem)
-            updatedItem := Core.GetItem(Stash.CraftItem)
-            this._CheckSuccess(updatedItem, conf, "Успех достигнут!`n`n", "SUCCESS on Initial Augmentation")
+        if (augs.Count > 0 && this._ShouldAugment(item, conf)) {
+            augs.Use(Stash.CraftItem)
+            item := Core.GetItem(Stash.CraftItem)
+            this._CheckSuccess(item, conf, "Успех достигнут!`n`n", "SUCCESS on Initial Augmentation")
         }
 
         ToolTip()
@@ -142,22 +138,21 @@ class AlterationCrafting {
     
     static _ShouldAugment(item, conf) {
         if (conf.Strategy = this.STRATEGY_CLEAN) {
-            return item.Length == 0 ; если начали с предмета, заануленного в 0
+            return item.mods.Length == 0 ; если начали с предмета, заануленного в 0
         }
         if (conf.Strategy = this.STRATEGY_ANY) {
-            return item.Length < 2
+            return item.mods.Length < 2
         }
         if (conf.Strategy = this.STRATEGY_BOTH) {
-            return Core.CountMatches(item, conf.Filters) == item.Length
+            return Core.CountMatches(item, conf.Filters) == item.mods.Length
         }
         return false
     }
 
     static _CheckSuccess(item, conf, message, logMessage) {
         if this.Evaluate(item, conf.Filters, conf.Strategy) {
-            summary := Core.GetItemSummary(item)
-            Util.Log(logMessage . Util.ReplaceNewLines(summary))
-            MsgBox(message . summary, "Успех", "Iconi")
+            Util.Log(logMessage . Util.ReplaceNewLines(item.ToString()))
+            MsgBox(message . item.ToString(), "Успех", "Iconi")
             ExitApp()
         }
     }
