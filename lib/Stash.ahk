@@ -129,6 +129,7 @@ class CurrencyItem {
     }
 
     Refresh() {
+        Sleep(Config.PingDelay + Config.FPSDelay)
         rawText := Core.GetItemDetailedText(this.position)
         this._callsSinceSync := 0
         if (rawText == "" || !InStr(rawText, "Rarity: Currency")) {

@@ -5,8 +5,6 @@ class AlterationCrafting {
     static STRATEGY_BOTH := "BOTH"
     static STRATEGY_CLEAN := "CLEAN"
 
-    static RARITY_BLUE := "Magic"
-
     static EVAL_SUCCESS := "Success"
     static EVAL_FAILURE := "Failure"
     static EVAL_AUGMENT := "Augment"
@@ -42,14 +40,16 @@ class AlterationCrafting {
         }
 
         Util.Log("--- STARTING NEW SESSION (Strategy: " . strategy . ") ---")
-        result := this.ExecuteLoop(filteredFilters, strategy, maxAttempts)
+        alts := Stash.Get(Currencies.Alteration)
+        augs := Stash.Get(Currencies.Augmentation)
+        result := this.ExecuteLoop(alts, augs, filteredFilters, strategy, maxAttempts)
         switch result.exec {
-            case this.EXECUTE_SUCCESS:
+            case Util.EXECUTE_SUCCESS:
                 Util.SuccessWithMessageAndLog(
                     "Успех достигнут на шаге " result.steps "!`n`n" result.item.ToString(),
-                    "SUCCESS on step " A_Index ": " Util.ReplaceNewLines(result.item.ToString())
+                    "SUCCESS on step " result.steps ": " Util.ReplaceNewLines(result.item.ToString())
                 )
-            case this.EXECUTE_OUT_OF_CURRENCY:
+            case Util.EXECUTE_OUT_OF_CURRENCY:
                 Util.FailWithMessageAndLog(
                     "Закончились альты!",
                     "FAILED: Out of " Currencies.Alteration.name
@@ -77,27 +77,22 @@ class AlterationCrafting {
         return validFilters
     }
 
-    static EXECUTE_SUCCESS := "Success"
-    static EXECUTE_OUT_OF_CURRENCY := "Out of currency"
     static EXECUTE_OUT_OF_ATTEMPTS := "Out of attempts"
-    static ExecuteLoop(filters, strategy, maxAttempts := 0) {
+    static ExecuteLoop(alts, augs, filters, strategy, maxAttempts := 0) {
         consecutiveErrors := 0
         maxErrors := 3
-
-        alts := Stash.Get(Currencies.Alteration)
-        augs := Stash.Get(Currencies.Augmentation)
 
         eval := this._CheckInitialState(filters, strategy, augs)
         item := Core.GetItem(Stash.CraftItem)
         switch eval {
             case this.EVAL_SUCCESS:
-                return { exec: this.EXECUTE_SUCCESS, steps: 0, item: item}
+                return { exec: Util.EXECUTE_SUCCESS, steps: 0, item: item}
             default:
         }
 
         loop ((maxAttempts > 0) ? maxAttempts : 100000) {
             if (alts.Count < 1) {
-                return { exec: this.EXECUTE_OUT_OF_CURRENCY, steps: A_Index, item: item}
+                return { exec: Util.EXECUTE_OUT_OF_CURRENCY, steps: A_Index, item: item}
             }
 
             item := alts.Use(Stash.CraftItem)
@@ -122,7 +117,7 @@ class AlterationCrafting {
             }
             switch eval {
                 case this.EVAL_SUCCESS:
-                    return { exec: this.EXECUTE_SUCCESS, steps: A_Index, item: item}
+                    return { exec: Util.EXECUTE_SUCCESS, steps: A_Index, item: item}
                 default:
             }
         }
@@ -135,7 +130,7 @@ class AlterationCrafting {
 
         item := Core.GetItem(Stash.CraftItem)
 
-        if (item.rarity != this.RARITY_BLUE) {
+        if (item.rarity != ItemData.RARITY_BLUE) {
             transmutes := Stash.Get(Currencies.Transmutation)
             if (transmutes.Count > 0) {
                 item := transmutes.Use(Stash.CraftItem)

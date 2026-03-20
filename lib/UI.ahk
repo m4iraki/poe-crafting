@@ -128,7 +128,7 @@ class HistoryDashboard {
             ctrl.SetFont("c888888")
 
         targetArray[currentIndex].SetFont("cFFFFFF") 
-        targetArray[currentIndex].Value := item.CompactString()
+        targetArray[currentIndex].Value := "[" (this.totalCount + 1) "] " item.CompactString()
         
         this.totalCount++
     }

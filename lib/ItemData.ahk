@@ -3,6 +3,13 @@
 class ItemData {
     static PrefixesStr := "Prefixes"
     static SuffixesStr := "Suffixes"
+
+    static PREFIX := "Prefix"
+    static SUFFIX := "Suffix"
+    static RARITY_WHITE := "Normal"
+    static RARITY_BLUE := "Magic"
+    static RARITY_GOLD := "Rare"
+
     __New(name := "", rarity := "", mods := []) {
         this.name := name
         this.rarity := rarity
@@ -11,10 +18,10 @@ class ItemData {
         this.prefixes := []
         this.suffixes := []
         for i, mod in mods {
-            if (mod.type == "Prefix") {
+            if (mod.type == ItemData.PREFIX) {
                 this.prefixes.Push(mod)
             }
-            if (mod.type == "Suffix") {
+            if (mod.type == ItemData.SUFFIX) {
                 this.suffixes.Push(mod)
             }
         }
@@ -33,7 +40,7 @@ class ItemData {
         suffixes := Util.ModsMapCompact(this.suffixes)
         suffixPadding := Max(suffixes.width, StrLen(ItemData.SuffixesStr))
 
-        string := this.name "`nRarity: " this.rarity "`n" Util.PadRight("Prefixes", prefixPadding) "| " Util.PadRight("Suffixes", suffixPadding) "`n"
+        string := this.name "`nRarity: " this.rarity "`n" Util.PadRight(ItemData.PrefixesStr, prefixPadding) "| " Util.PadRight(ItemData.SuffixesStr, suffixPadding) "`n"
         rows := Max(this.prefixes.Length, this.suffixes.Length)
         idx := 1
         loop rows {

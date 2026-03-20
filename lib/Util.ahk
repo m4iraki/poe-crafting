@@ -1,6 +1,9 @@
 #Requires AutoHotkey v2.0
 
 class Util {
+    static EXECUTE_OUT_OF_CURRENCY := "Out of currency"
+    static EXECUTE_SUCCESS := "Success"
+    
     static Log(text) {
         try {
             FileAppend("[" . FormatTime(, "HH:mm:ss") . "] " . text . "`n", Config.LogFile, "UTF-8")
@@ -31,6 +34,16 @@ class Util {
             strings.Push(string)
         }
         return { strings: strings, width: width }
+    }
+
+    static ArrCount(arr, predicate) {
+        count := 0
+        for a in arr {
+            if (predicate(a)) {
+                count++
+            }
+        }
+        return count
     }
 
     static PadRight(str, length, min := 0, char := " ") {

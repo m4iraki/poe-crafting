@@ -1,4 +1,5 @@
 #Requires AutoHotkey v2.0
+#SingleInstance
 
 ; Без зависимостей
 #Include Config.ahk
@@ -11,6 +12,7 @@
 #Include Stash.ahk
 ; Конкретные имплементации
 #Include AlterationCrafting.ahk
+#Include RegalCrafting.ahk
 
 ; Инициализация
 Config.Initialize()
@@ -24,4 +26,8 @@ F4:: {
 	ToolTip("Script Terminated")
 	Sleep(1000)
 	ExitApp()
+}
+; Пауза
+F5:: {
+	Pause(-1)
 }
