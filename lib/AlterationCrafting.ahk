@@ -146,8 +146,8 @@ class AlterationCrafting {
                 item := transmutes.Use(Stash.CraftItem)
             } else {
                 Util.ExitWithMessage(
-                    "Предмет не является магическим и закончились трансмутки!`n`n" . item.ToString(),
-                    "FAILURE: Item is not magic and out of Transmutations. " . Util.ReplaceNewLines(item.ToString()),
+                    "Предмет не является магическим и закончились трансмутки!",
+                    "FAILURE: Item is not magic and out of " transmutes.currencyType.name ". ",
                     false
                 )
             }
