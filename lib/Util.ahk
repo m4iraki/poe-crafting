@@ -22,4 +22,21 @@ class Util {
         return StrSplit(text, "`n")
     }
 
+    static ModsMapCompact(mods) {
+        width := 0
+        strings := []
+        for i, mod in mods {
+            string := mod.name " (T " mod.tier ")"
+            width := Max(width, StrLen(string))
+            strings.Push(string)
+        }
+        return { strings: strings, width: width }
+    }
+
+    static PadRight(str, length, min := 0, char := " ") {
+        loop Max(min, length - StrLen(str)) {
+            str .= char
+        }
+        return str
+    }
 }

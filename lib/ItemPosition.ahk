@@ -8,6 +8,8 @@ class ItemPosition {
         this.h := h * scale
         this.centerX := this.x + this.w / 2
         this.centerY := this.y + this.h / 2
+        this.right := this.x + this.w
+        this.bottom := this.y + this.h
     }
 
 

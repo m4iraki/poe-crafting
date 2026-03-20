@@ -81,6 +81,7 @@ class AlterationCrafting {
 
             alts.Use(Stash.CraftItem)
             item := Core.GetItem(Stash.CraftItem)
+            HistoryDashboard.AddItem(item)
             if (item.empty) {
                 consecutiveErrors++
                 if (consecutiveErrors >= maxErrors) {
@@ -101,6 +102,7 @@ class AlterationCrafting {
             if (augs.Count > 0 && this._ShouldAugment(item, conf)) {
                 augs.Use(Stash.CraftItem)
                 item := Core.GetItem(Stash.CraftItem)
+                HistoryDashboard.AddItem(item)
                 if (Config.DebugLevel > 0) {
                     Util.Log("Step " A_Index " (AUG): " Util.ReplaceNewLines(item.ToString()))
                 }
@@ -130,6 +132,7 @@ class AlterationCrafting {
         if (augs.Count > 0 && this._ShouldAugment(item, conf)) {
             augs.Use(Stash.CraftItem)
             item := Core.GetItem(Stash.CraftItem)
+            HistoryDashboard.AddItem(item)
             this._CheckSuccess(item, conf, "Успех достигнут!`n`n", "SUCCESS on Initial Augmentation")
         }
 
