@@ -17,7 +17,7 @@
 
 ```autohotkey
 #Requires AutoHotkey v2.0
-#Include lib.ahk
+#Include ../lib/_Includes.ahk
 
 ; Описание фильтров
 ; необходимо указать хотя бы название или часть описания мода, можно и то и то
@@ -41,29 +41,37 @@ MyFilters := [
 
 ; Собираем объект для передачи в алгоритм крафта
 conf := {
-    Version:     1.0,
     MaxAttempts: 500,
     Strategy:    AlterationCrafting.STRATEGY_ANY, ; "ANY", "BOTH", "CLEAN"
     Filters:     MyFilters,
-    DebugLevel:  0 ; 0 - только итог, 1 - всё подряд
 }
 
 ; Запускаем крафт
 AlterationCrafting.Run(conf)
 ```
+Для крафта с Regal Orb нужно 2 списка фильтров: необходимые моды и желательные моды, а также 2 стратегии для необходимых и желательных модов. Стратегия желательных модов должна быть такой же или шире, чем стратегия для необходимых (нельзя ожидать 2 префикса + 1 суффикс с необходимыми модами и 1 префикс и 2 суффикса с желательными модами)
+```
+#Requires AutoHotkey v2.0
+#Include ../lib/_Includes.ahk
+
+MandatoryFilters := [
+    { text: "to Intelligence" },
+    { text: "to All Attributes" }
+]
+NiceFilters := [
+    { text: "increased Effect" },
+    { text: "to Maximum Energy Shield" }
+]
+conf := {
+    MandatoryFilters: MandatoryFilters,
+    NiceFilters: NiceFilters,
+    MandatoryStrategy: RegalCrafting.STRATEGY_1ANY,
+    NiceStrategy: RegalCrafting.STRATEGY_2ANY,
+}
+
+RegalCrafting.Run(conf)
+```
 ---
-
-## Архитектура проекта
-
-Проект разделен на логические слои, чтобы изменения в одном файле не ломали работу других:
-
-* **`lib.ahk` (Движок):**
-* * `CraftingCore`: "Руки" скрипта. Работа с окном игры, клики, парсинг текста через Regex, проверка наличия валюты по цвету пикселей.
-* `AlterationCrafting`: "Мозг" скрипта. Алгоритмы принятия решений (когда использовать *Orb of Alteration*, а когда *Orb of Augmentation*).
-* **`StashMap` (Разметка):** Координаты элементов вкладки для разрешения 2560x1440.
-* **`settings.ini`:** Локальные настройки задержек и чувствительности (создается автоматически при первом запуске).
-* **`YourCraft.ahk` (User Config):** Файл с описанием ваших фильтров и выбором стратегии.
-
 ### Автоматический скейлинг
 Движок использует **вертикальный скейлинг**. Координаты из `StashMap` автоматически пересчитываются под текущую высоту клиентской области окна PoE.
 > *Поддерживает большинство разрешений (1080p, 2K, 4K) и оконные режимы.*
@@ -76,6 +84,5 @@ AlterationCrafting.Run(conf)
 
 ---
 ## TODO
-* Крафт с помощью Regal Orb + Orb of Scouring (поверх AlterationCrafting)
 * Крафт с помощью Chaos Orb + Exalted Orb
 * Расширенный функционал для кастомных сценариев
