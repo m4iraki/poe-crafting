@@ -15,22 +15,23 @@ class RegalCrafting {
     static STRATEGY_0P1S := { name: "0P1S", count: 1, p: 0, s: 1 }
 
     static Run(conf) {
-        mandatoryFilters := this._FilterFilters(conf.MandatoryFilters)
-        niceFilters := this._FilterFilters(conf.NiceFilters, mandatoryFilters)
+        mandatoryFilters := (conf.HasProp("MandatoryFilters")) ? this._FilterFilters(conf.MandatoryFilters) : []
+        niceFilters := (conf.HasProp("NiceFilters")) ? this._FilterFilters(conf.NiceFilters, mandatoryFilters) : []
         allFilters := []
         allFilters.Push(mandatoryFilters*)
         allFilters.Push(niceFilters*)
+        niceStrategy := (conf.HasProp("NiceStrategy")) ? conf.NiceStrategy : conf.MandatoryStrategy
         altFilters := (conf.MandatoryStrategy.count == 3) ? mandatoryFilters : allFilters
-        altStrategy := (conf.NiceStrategy.count == 3) ? AlterationCrafting.STRATEGY_BOTH : AlterationCrafting.STRATEGY_ANY
+        altStrategy := (niceStrategy.count == 3) ? AlterationCrafting.STRATEGY_BOTH : AlterationCrafting.STRATEGY_ANY
         conf := {
             MandatoryFilters: mandatoryFilters,
             NiceFilters: niceFilters,
             AllFilters: allFilters,
             MandatoryStrategy: conf.MandatoryStrategy,
-            NiceStrategy: conf.NiceStrategy,
-            MinCount: Max(conf.MandatoryStrategy.count, conf.NiceStrategy.count),
-            MinPref: Max(conf.MandatoryStrategy.p, conf.NiceStrategy.p),
-            MinSuff: Max(conf.MandatoryStrategy.s, conf.NiceStrategy.s),
+            NiceStrategy: niceStrategy,
+            MinCount: Max(conf.MandatoryStrategy.count, niceStrategy.count),
+            MinPref: Max(conf.MandatoryStrategy.p, niceStrategy.p),
+            MinSuff: Max(conf.MandatoryStrategy.s, niceStrategy.s),
             AltFilters: altFilters,
             AltStrategy: altStrategy,
         }
