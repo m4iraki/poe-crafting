@@ -13,6 +13,7 @@
 ; Конкретные имплементации
 #Include AlterationCrafting.ahk
 #Include RegalCrafting.ahk
+#Include ChaosCrafting.ahk
 
 ; Инициализация
 Config.Initialize()

@@ -6,7 +6,7 @@ class Core {
         maxRetries := 3
         rawText := ""
 
-        Loop maxRetries {
+        loop maxRetries {
             rawText := this.GetItemDetailedText(item)
             if (rawText != "")
                 break
@@ -47,8 +47,8 @@ class Core {
         for index, line in lines {
             line := Trim(line)
             if (line = "") {
-				continue
-			}
+                continue
+            }
             if RegExMatch(line, '\{\s?(Prefix|Suffix)\sModifier\s"(.*?)"\s\(Tier:\s(\d+)\)', &match) {
                 if (currentMod != "")
                     parsedMods.Push(currentMod)
@@ -90,30 +90,48 @@ class Core {
         return ""
     }
 
+    static ModMatches(mod, filter) {
+        nameMismatch := filter.HasProp("name") && !(mod.name = filter.name)
+        if (nameMismatch) {
+            return false
+        }
+        tierMismatch := filter.HasProp("tier") && (mod.tier > filter.tier)
+        if (tierMismatch) {
+            return false
+        }
+        textMismatch := filter.HasProp("text") && !InStr(mod.desc, filter.text)
+        if (textMismatch) {
+            return false
+        }
+        return true
+    }
+
+    static ModMatchesFilters(mod, filters) {
+        for f in filters {
+            if (this.ModMatches(mod, f)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    static HasMatches(item, filters) {
+        return Util.ArrExists(item.mods, (mod) => this.ModMatchesFilters(mod, filters))
+    }
+
     static CountMatches(item, filters) {
-        return this.GetMatches(item, filters).Length
+        return Util.ArrCount(item.mods, (mod) => this.ModMatchesFilters(mod, filters))
     }
 
     static GetMatches(item, filters) {
-        matches := []
-        for mod in item.mods {
-            for f in filters {
-                nameMatch := !f.HasProp("name") || (mod.name = f.name)
-                if (!nameMatch) {
-                    continue
-                }
-                tierMatch := !f.HasProp("tier") || (mod.tier <= f.tier)
-                if (!tierMatch) {
-                    continue
-                }
-                textMatch := !f.HasProp("text") || InStr(mod.desc, f.text)
-                if (!textMatch) {
-                    continue
-                }
-                matches.Push(mod)
-                break
-            }
-        }
-        return matches
+        return Util.ArrFilter(item.mods, (mod) => this.ModMatchesFilters(mod, filters))
+    }
+
+    static PartitionMatches(item, filters) {
+        return Util.ArrPartition(item.mods, (mod) => this.ModMatchesFilters(mod, filters))
+    }
+
+    static MinMax(value, min, max) {
+        Min(max, Max(value, min))
     }
 }

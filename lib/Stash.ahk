@@ -28,13 +28,12 @@ class Stash {
 	}
 
 	static Get(currencyType) {
-		if (this.IsInitialized) {
-			this.Initialize()
-		}
 		if (this.Currencies.Has(currencyType)) {
             currency := this.Currencies[currencyType]
-            currency.Refresh()
-            currency.UpdateUI() 
+            if (!currency.Initialized()) {
+                currency.Refresh()
+                currency.UpdateUI() 
+            }
 			return currency
 		}
 
@@ -89,6 +88,9 @@ class CurrencyItem {
                 this.UpdateUI()
             }
         }
+    }
+    Exists() {
+        return this._count > 0
     }
 
     Use(targetPos) {
@@ -154,4 +156,8 @@ class CurrencyItem {
 
     Show() => (!(this.gui == "") ? this.gui.Show("NoActivate") : this.UpdateUI())
     Hide() => (!(this.gui == "") ? this.gui.Hide() : "")
+    Initialized() {
+        return this.gui != ""
+    }
+
 }
