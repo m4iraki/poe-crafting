@@ -41,6 +41,10 @@ class Core {
         if RegExMatch(itemText, "m)^([^:^-][^:\r\n]+)$(*ACCEPT)", &names) {
             name := names[1]
         }
+        ilvl := ""
+        if RegExMatch(itemText, "m)^Item Level: (\d+)$(*ACCEPT)", &levels) {
+            ilvl := levels[1]
+        }
 
         currentMod := ""
 
@@ -81,7 +85,7 @@ class Core {
         for mod in parsedMods
             mod.desc := Trim(RegExReplace(mod.desc, "\s+", " "))
 
-        return ItemData(name, rarity, parsedMods)
+        return ItemData(name, rarity, parsedMods, ilvl)
     }
 
     static GetRarity(itemText) {

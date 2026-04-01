@@ -10,11 +10,12 @@ class ItemData {
     static RARITY_BLUE := "Magic"
     static RARITY_GOLD := "Rare"
 
-    __New(name := "", rarity := "", mods := []) {
+    __New(name := "", rarity := "", mods := [], ilvl := "") {
         this.name := name
         this.rarity := rarity
         this.mods := mods
         this.empty := name = ""
+        this.ilvl := ilvl
         this.prefixes := []
         this.suffixes := []
         for i, mod in mods {
